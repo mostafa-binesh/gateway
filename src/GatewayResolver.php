@@ -219,7 +219,7 @@ class GatewayResolver
 	protected function getConfigFromDBUsingConfigName($configName, $port)
 	{
 		$gatewayConfig = GatewayConfig::query()->where([
-			'port_name' => $port,
+			'port' => $port,
 			'name' => $configName,
 		])->first();
 		if (!$gatewayConfig) {
