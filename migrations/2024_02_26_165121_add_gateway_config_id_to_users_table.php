@@ -8,7 +8,7 @@ class AddGatewayConfigIdToUsersTable extends Migration
 {
     public function getUserTable() {
         
-        return config('gateway.user_table_name', 'users');
+        return config('gateway.users_table_name', 'users');
     }
 
     /**
