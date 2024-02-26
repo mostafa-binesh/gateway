@@ -19,12 +19,10 @@ class CreateGatewayConfigsTable extends Migration
     public function up()
     {
         Schema::create(self::getTable(), function (Blueprint $table) {
-            $table->engine = "innoDB";
-			$table->unsignedBigInteger('id', true);
+			$table->id();
+			$table->string('port');
 			$table->string('name');
-			$table->string('config_name');
             $table->text('config');
-            $table->boolean('active');
         });
     }
 
