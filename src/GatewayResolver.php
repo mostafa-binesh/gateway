@@ -17,6 +17,12 @@ use Larabookir\Gateway\Exceptions\PortNotFoundException;
 use Larabookir\Gateway\Exceptions\InvalidRequestException;
 use Larabookir\Gateway\Exceptions\NotFoundTransactionException;
 use Illuminate\Support\Facades\DB;
+use Larabookir\Gateway\Exceptions\ConfigSourceEmptyException;
+use Larabookir\Gateway\Exceptions\DBConfigNotFoundException;
+use Larabookir\Gateway\Exceptions\GatewayConfigRelationshipNotFoundException;
+use Larabookir\Gateway\Exceptions\SourceNotFoundException;
+use Larabookir\Gateway\Exceptions\UserGatewayConfigNotFoundExceptions;
+use Larabookir\Gateway\Models\GatewayConfig;
 
 class GatewayResolver
 {
@@ -29,6 +35,11 @@ class GatewayResolver
 	public $config;
 
 	/**
+	 * @var string
+	 */
+	public $gatewaySource;
+
+	/**
 	 * Keep current port driver
 	 *
 	 * @var Mellat|Saman|Sadad|Zarinpal|Payir|Parsian
@@ -39,8 +50,9 @@ class GatewayResolver
 	 * Gateway constructor.
 	 * @param null $config
 	 * @param null $port
+	 * @param null $gatewaySource
 	 */
-	public function __construct($config = null, $port = null)
+	public function __construct($config = null, $port = null, $gatewaySource = null)
 	{
 		$this->config = app('config');
 		$this->request = app('request');
@@ -49,6 +61,11 @@ class GatewayResolver
 			date_default_timezone_set($this->config->get('gateway.timezone'));
 
 		if (!is_null($port)) $this->make($port);
+
+		if (!is_null($gatewaySource))
+			$this->gatewaySource = $gatewaySource;
+		else
+			$this->gatewaySource = config('gateway.source');
 	}
 
 	/**
@@ -119,14 +136,24 @@ class GatewayResolver
 		return $this->port->verify($transaction);
 	}
 
+	public function makeWithUser($port, $user)
+	{
+		return $this->make($port, $user);
+	}
 
+	public function makeWithConfigName($port, $configName)
+	{
+		return $this->make($port, null, $configName);
+	}
 	/**
 	 * Create new object from port class
 	 *
 	 * @param int $port
-	 * @throws PortNotFoundException
+	 * @param Model $user
+	 * @param string $configName
+	 * @throws PortNotFoundException|SourceNotFoundException|ConfigSourceEmptyException|DBConfigNotFoundException
 	 */
-	function make($port)
+	function make($port, $user = null, $configName = null)
     {
         if ($port InstanceOf Mellat) {
             $name = Enum::MELLAT;
@@ -156,11 +183,69 @@ class GatewayResolver
         } else
             throw new PortNotFoundException;
 
-        $this->port = $port;
-        $this->port->setConfig($this->config); // injects config
-        $this->port->setPortName($name); // injects config
-        $this->port->boot();
+		$this->port = $port;
+		$config = $this->getConfig($port, $user, $configName);
 
-        return $this;
-    }
+		$this->port->setConfig($config); // injects config
+		$this->port->setPortName($name); // injects config
+
+		$this->port->boot();
+
+		return $this;
+	}
+	protected function getConfig($portInstance, $user = null, $configName = null)
+	{
+		switch ($this->gatewaySource) {
+			case 'database':
+				return $this->getConfigFromDatabase($portInstance, $user, $configName);
+			case 'config':
+				return $this->config; // Assuming this->config is already set appropriately
+			default:
+				throw new SourceNotFoundException;
+		}
+	}
+
+	protected function getConfigFromUser($user)
+	{
+		if (is_null($user->gatewayConfig())) {
+			throw new GatewayConfigRelationshipNotFoundException;
+		}
+		$userGatewayConfig = $user->gatewayConfig;
+		if (!$userGatewayConfig)
+			throw new UserGatewayConfigNotFoundExceptions;
+		return $userGatewayConfig->config;
+	}
+
+	protected function getConfigFromDBUsingConfigName($configName, $port)
+	{
+		$gatewayConfig = GatewayConfig::query()->where([
+			'port_name' => $port,
+			'name' => $configName,
+		])->first();
+		if (!$gatewayConfig) {
+			// config was not found on the database
+			throw new DBConfigNotFoundException($configName, $port);
+		}
+		return $gatewayConfig->config;
+	}
+
+	/**
+	 * Retreives the config from the database 
+	 * using user or configName
+	 *
+	 * @param int $port
+	 * @param Model $user
+	 * @param string $configName
+	 * @throws PortNotFoundException|SourceNotFoundException|ConfigSourceEmptyException|DBConfigNotFoundException
+	 */
+	protected function getConfigFromDatabase($portInstance, $user = null, $configName = null)
+	{
+		if (!is_null($user)) {
+			return $this->getConfigFromUser($user);
+		} elseif (!is_null($configName)) {
+			return $this->getConfigFromDBUsingConfigName($configName, $portInstance);
+		} else {
+			throw new ConfigSourceEmptyException;
+		}
+	}
 }
