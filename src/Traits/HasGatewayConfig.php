@@ -16,6 +16,6 @@ trait HasGatewayConfig
      */
     public function gatewayConfig()
     {
-        return $this->belongsTo(GatewayConfig::class);
+        return $this->belongsTo(GatewayConfig::class, 'gateway_config_id', 'id');
     }
 }
