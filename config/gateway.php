@@ -7,6 +7,7 @@ return [
     // If you want Gateway not set timezone, just leave it empty
     //--------------------------------
     'timezone' => 'Asia/Tehran',
+    'source' => 'database', // database or config
 
     //--------------------------------
     // Zarinpal gateway
@@ -127,4 +128,6 @@ return [
     // Tables names
     //--------------------------------
     'table'    => 'gateway_transactions',
+    'gateway_configs_table_name'    => 'gateway_configs',
+    'users_table_name'    => 'users',
 ];
