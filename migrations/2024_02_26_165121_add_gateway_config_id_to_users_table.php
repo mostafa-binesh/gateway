@@ -6,8 +6,8 @@ use Illuminate\Support\Facades\Schema;
 
 class AddGatewayConfigIdToUsersTable extends Migration
 {
-    public function getTable()
-    {
+    public function getUserTable() {
+        
         return config('gateway.user_table_name', 'users');
     }
 
@@ -18,13 +18,13 @@ class AddGatewayConfigIdToUsersTable extends Migration
      */
     public function up()
     {
-        Schema::table(self::getTable(), function (Blueprint $table) {
+        Schema::table($this->getUserTable(), function (Blueprint $table) {
             $table->unsignedBigInteger('gateway_config_id');
 
             $table
                 ->foreign('gateway_config_id')
                 ->references('id')
-                ->on($this->getTable())
+                ->on($this->getUserTable())
                 ->onDelete('cascade');
         });
     }
@@ -36,6 +36,8 @@ class AddGatewayConfigIdToUsersTable extends Migration
      */
     public function down()
     {
-        Schema::drop(self::getTable());
+        Schema::table($this->getUserTable(), function (Blueprint $table) {
+            $table->dropColumn('gateway_config_id');
+        });
     }
 }
