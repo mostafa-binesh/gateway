@@ -129,5 +129,4 @@ return [
     //--------------------------------
     'table'    => 'gateway_transactions',
     'gateway_configs_table_name'    => 'gateway_configs',
-    'users_table_name'    => 'users',
 ];
